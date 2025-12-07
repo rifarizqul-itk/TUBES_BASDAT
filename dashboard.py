@@ -1,138 +1,123 @@
-# dashboard.py
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from config import get_transaksi_data, get_product_sales_data, get_payment_status_data
+from config import get_transaksi_data, get_product_sales_data, get_payment_status_data, get_detail_items
 
-# Konfigurasi Halaman
-st.set_page_config(
-    page_title="Dashboard Lifting & Rigging",
-    page_icon="🏗️",
-    layout="wide"
-)
+# --- 1. CONFIG HALAMAN ---
+st.set_page_config(page_title="Dashboard Toko NN", layout="wide")
+st.title("🏗️ Dashboard Data Penjualan Toko NN")
+st.write("Jl. Pandan Sari No.45, Marga Sari, Kec. Balikpapan Bar., Kota Balikpapan, Kalimantan Timur 76123")
 
-# Judul dan Deskripsi
-st.title("🏗️ Dashboard Penjualan Lifting & Rigging Balikpapan")
-st.markdown("Monitoring performa penjualan, stok barang, dan status pembayaran.")
-
-# --- LOAD DATA ---
-# Kita load semua data di awal
+# --- 2. LOAD DATA ---
 df_transaksi = get_transaksi_data()
 df_produk = get_product_sales_data()
 df_payment = get_payment_status_data()
 
-# Pastikan kolom tanggal bertipe datetime
+# Convert kolom tanggal
 df_transaksi['tanggal'] = pd.to_datetime(df_transaksi['tanggal'])
 
-# --- SIDEBAR FILTER ---
-st.sidebar.header("Filter Data")
-# Filter Tanggal
+# --- 3. FILTER TANGGAL (Versi Simpel) ---
+st.sidebar.header("Filter Tanggal")
 min_date = df_transaksi['tanggal'].min()
 max_date = df_transaksi['tanggal'].max()
 
-try:
-    start_date, end_date = st.sidebar.date_input(
-        "Rentang Tanggal",
-        value=[min_date, max_date],
-        min_value=min_date,
-        max_value=max_date
-    )
-except:
-    st.sidebar.error("Data tanggal tidak cukup untuk filter rentang.")
-    start_date, end_date = min_date, max_date
+start_date = st.sidebar.date_input("Mulai", min_date)
+end_date = st.sidebar.date_input("Sampai", max_date)
 
-# Terapkan Filter ke DataFrame Transaksi
+# Filter data utama
 filtered_df = df_transaksi[
     (df_transaksi['tanggal'] >= pd.to_datetime(start_date)) & 
     (df_transaksi['tanggal'] <= pd.to_datetime(end_date))
 ]
 
-# --- KPI / METRICS (Baris Atas) ---
-st.markdown("### 📊 Ringkasan Performa")
-col1, col2, col3, col4 = st.columns(4)
+# --- 4. RINGKASAN (Metrics) ---
+st.subheader("Ringkasan Performa")
+col1, col2, col3 = st.columns(3)
 
 total_omzet = filtered_df['total_tagihan'].sum()
-total_transaksi = filtered_df.shape[0]
+total_trx = filtered_df.shape[0]
 total_piutang = filtered_df['sisa_tagihan'].sum()
-avg_transaksi = filtered_df['total_tagihan'].mean()
 
 with col1:
     st.metric("Total Omzet", f"Rp {total_omzet:,.0f}")
 with col2:
-    st.metric("Total Transaksi", f"{total_transaksi} Trx")
+    st.metric("Jumlah Transaksi", f"{total_trx}")
 with col3:
-    st.metric("Total Piutang (Belum Lunas)", f"Rp {total_piutang:,.0f}", delta_color="inverse")
-with col4:
-    st.metric("Rata-rata Nilai Order", f"Rp {avg_transaksi:,.0f}")
+# Kita buat tampilan manual biar mirip st.metric tapi berwarna
+    st.markdown(f"""
+    <p style="font-size: 14px; margin-bottom: 0px; color: #666;">Total Piutang</p>
+    <h2 style="color: #d62728; margin-top: -15px;">Rp {total_piutang:,.0f}</h2>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# --- BARIS 1: GRAFIK TREN & PIUTANG ---
-col_left, col_right = st.columns([2, 1])
+# --- 5. GRAFIK  ---
+col_kiri, col_kanan = st.columns([2, 1])
 
-with col_left:
-    st.subheader("📈 Tren Pendapatan Harian")
-    # Group by tanggal untuk grafik garis
-    daily_sales = filtered_df.groupby('tanggal')['total_tagihan'].sum().reset_index()
-    
-    fig_trend = px.line(
-        daily_sales, 
-        x='tanggal', 
-        y='total_tagihan',
-        markers=True,
-        title='Grafik Penjualan Harian',
-        labels={'total_tagihan': 'Omzet (Rp)', 'tanggal': 'Tanggal'}
-    )
-    fig_trend.update_traces(line_color='#1f77b4', line_width=3)
-    st.plotly_chart(fig_trend, use_container_width=True)
+with col_kiri:
+    st.subheader("Tren Penjualan")
+    # Data disiapkan sederhana: Tanggal & Total
+    daily = filtered_df.groupby('tanggal')['total_tagihan'].sum()
+    st.line_chart(daily)
 
-with col_right:
-    st.subheader("💰 Status Pembayaran")
-    # Ganti px.donut menjadi px.pie dengan parameter hole
-    fig_pie = px.pie(
-        df_payment, 
-        values='jumlah_transaksi', 
-        names='status_pembayaran',
-        title='Proporsi Transaksi',
-        hole=0.4, # Ini yang membuatnya jadi bentuk Donut
-        color='status_pembayaran',
-        color_discrete_map={'Lunas':'#2ca02c', 'Belum Lunas':'#d62728'}
-    )
-    st.plotly_chart(fig_pie, use_container_width=True)
-    
-    # Tampilkan warning jika ada piutang besar
-    if total_piutang > 0:
-        st.warning(f"⚠️ Perhatian: Masih ada sisa tagihan sebesar **Rp {total_piutang:,.0f}** yang belum dibayar pelanggan.")
+with col_kanan:
+    st.subheader("Status Pembayaran")
+    # Data disiapkan sederhana: Status & Jumlah
+    status_counts = df_payment.set_index('status_pembayaran')['jumlah_transaksi']
+    st.bar_chart(status_counts)
 
-# --- BARIS 2: ANALISIS PRODUK ---
-st.subheader("🛠️ Top 10 Barang Terlaris (Revenue)")
-# Ambil top 10 produk berdasarkan pendapatan
-top_products = df_produk.head(10).sort_values(by='total_pendapatan', ascending=True)
+st.markdown("---")
 
-fig_bar = px.bar(
-    top_products, 
-    x='total_pendapatan', 
-    y='nama_barang', 
-    orientation='h',
-    text='total_pendapatan',
-    title='Produk Penyumbang Omzet Terbesar',
-    labels={'total_pendapatan': 'Total Pendapatan (Rp)', 'nama_barang': 'Nama Barang'},
-    color='total_pendapatan',
-    color_continuous_scale='Viridis'
+# --- 6. DETAIL TRANSAKSI (Gaya 'Invoice' yang Kamu Suka) ---
+st.subheader("📄 Detail Transaksi")
+
+# Buat list pilihan ID yang rapi (ID - Nama Pelanggan)
+# Kita pakai Dictionary Comprehension biar codingan terlihat Python banget tapi tetap mudah dimengerti
+pilihan_transaksi = filtered_df['transaksi_id'].tolist()
+label_transaksi = {
+    row['transaksi_id']: f"ID {row['transaksi_id']} - {row['nama_pelanggan']} ({row['tanggal'].strftime('%d/%m/%Y')})"
+    for i, row in filtered_df.iterrows()
+}
+
+# Dropdown Pilih Transaksi
+id_dipilih = st.selectbox(
+    "Cari Transaksi:", 
+    options=pilihan_transaksi,
+    format_func=lambda x: label_transaksi.get(x, x) # Biar tampilan di dropdown ada namanya
 )
-fig_bar.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
-st.plotly_chart(fig_bar, use_container_width=True)
 
-# --- TABEL DATA ---
-with st.expander("Lihat Detail Data Transaksi"):
-    st.dataframe(filtered_df, use_container_width=True)
+# TAMPILKAN DATA (Hanya jika ada ID yang dipilih)
+if id_dipilih:
+    # 1. Ambil Data Header (Pelanggan & Total) dari filtered_df
+    header = filtered_df[filtered_df['transaksi_id'] == id_dipilih].iloc[0]
     
-    # Tombol Download
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        "⬇️ Download Data CSV",
-        data=csv,
-        file_name="laporan_penjualan.csv",
-        mime="text/csv",
-    )
+    # 2. Ambil Data Barang (Detail) dari Database via fungsi di config.py
+    items = get_detail_items(id_dipilih)
+    
+    # --- TAMPILAN INFORMASI (Kiri Kanan) ---
+    col_info1, col_info2 = st.columns(2)
+    
+    with col_info1:
+        st.info(f"""
+        **Pelanggan:**
+        \n👤 Nama: {header['nama_pelanggan']}
+        \n📞 Telp: {header['no_telepon']}
+        """)
+        
+    with col_info2:
+        st.success(f"""
+        **Transaksi:**
+        \n📅 Tanggal: {header['tanggal'].strftime('%d %B %Y')}
+        \n💰 Status: {header['status_pembayaran']}
+        \n👮 Kasir: {header['nama_karyawan']}
+        """)
+
+    # --- TAMPILAN TABEL BARANG ---
+    st.write("#### Daftar Barang Dibeli")
+    # Tampilkan tabel barang dengan format lebar penuh
+    st.dataframe(items, use_container_width=True)
+    
+    # Total Tagihan Besar di Bawah
+    st.markdown(f"### Total Tagihan: Rp {header['total_tagihan']:,.0f}")
+
+else:
+    st.warning("Data tidak ditemukan pada rentang tanggal ini.")

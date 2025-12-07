@@ -2,17 +2,16 @@
 import mysql.connector
 import pandas as pd
 
-# Konfigurasi koneksi ke database Laragon
 def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         port="3306",
         user="root",
-        password="", # Sesuaikan jika ada password
-        database="visualisasi"
+        password="", 
+        database="db_lifting" 
     )
 
-# 1. Mengambil Data Transaksi Gabungan (Untuk Analisis Umum)
+# 1. Mengambil Data Transaksi (Updated: Hapus Alamat)
 def get_transaksi_data():
     conn = get_db_connection()
     query = """
@@ -20,6 +19,7 @@ def get_transaksi_data():
             t.id AS transaksi_id,
             t.tanggal,
             p.nama AS nama_pelanggan,
+            p.no_telepon,   -- Alamat sudah dihapus dari tabel pelanggan
             k.nama_lengkap AS nama_karyawan,
             t.total_tagihan,
             t.sisa_tagihan,
@@ -33,7 +33,7 @@ def get_transaksi_data():
     conn.close()
     return df
 
-# 2. Mengambil Detail Penjualan Barang (Untuk Analisis Produk)
+# 2. Mengambil Detail Penjualan Barang
 def get_product_sales_data():
     conn = get_db_connection()
     query = """
@@ -52,7 +52,7 @@ def get_product_sales_data():
     conn.close()
     return df
 
-# 3. Mengambil Status Hutang/Piutang (Penting untuk Toko Teknik)
+# 3. Mengambil Status Hutang
 def get_payment_status_data():
     conn = get_db_connection()
     query = """
@@ -64,5 +64,23 @@ def get_payment_status_data():
         GROUP BY status_pembayaran
     """
     df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
+# 4. Mengambil Detail Items per Transaksi
+def get_detail_items(transaksi_id):
+    conn = get_db_connection()
+    query = """
+        SELECT 
+            b.nama_barang,
+            b.satuan,
+            dt.jumlah,
+            dt.harga_satuan,
+            dt.subtotal
+        FROM detail_transaksi dt
+        JOIN barang b ON dt.barang_id = b.id
+        WHERE dt.transaksi_id = %s
+    """
+    df = pd.read_sql(query, conn, params=(transaksi_id,))
     conn.close()
     return df
