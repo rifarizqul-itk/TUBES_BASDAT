@@ -42,7 +42,7 @@ with col1:
 with col2:
     st.metric("Jumlah Transaksi", f"{total_trx}")
 with col3:
-# Kita buat tampilan manual biar mirip st.metric tapi berwarna
+# Pake st.markdown biar bisa custom warna
     st.markdown(f"""
     <p style="font-size: 14px; margin-bottom: 0px; color: #666;">Total Piutang</p>
     <h2 style="color: #d62728; margin-top: -15px;">Rp {total_piutang:,.0f}</h2>
@@ -50,7 +50,7 @@ with col3:
 
 st.markdown("---")
 
-# --- GRAFIK  ---
+# --- GRAFIK TREN DAN STATUS ---
 col_kiri, col_kanan = st.columns([2, 1])
 
 with col_kiri:
