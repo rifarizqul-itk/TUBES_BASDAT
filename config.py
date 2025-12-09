@@ -11,7 +11,7 @@ def get_db_connection():
         database="db_lifting" 
     )
 
-# 1. Mengambil Data Transaksi (Updated: Hapus Alamat)
+# Mengambil Data Transaksi
 def get_transaksi_data():
     conn = get_db_connection()
     query = """
@@ -19,7 +19,7 @@ def get_transaksi_data():
             t.id AS transaksi_id,
             t.tanggal,
             p.nama AS nama_pelanggan,
-            p.no_telepon,   -- Alamat sudah dihapus dari tabel pelanggan
+            p.no_telepon,
             k.nama_lengkap AS nama_karyawan,
             t.total_tagihan,
             t.sisa_tagihan,
@@ -33,7 +33,7 @@ def get_transaksi_data():
     conn.close()
     return df
 
-# 2. Mengambil Detail Penjualan Barang
+# Mengambil Detail Penjualan Barang
 def get_product_sales_data():
     conn = get_db_connection()
     query = """
@@ -52,7 +52,7 @@ def get_product_sales_data():
     conn.close()
     return df
 
-# 3. Mengambil Status Hutang
+# Mengambil Status Hutang
 def get_payment_status_data():
     conn = get_db_connection()
     query = """
@@ -67,7 +67,7 @@ def get_payment_status_data():
     conn.close()
     return df
 
-# 4. Mengambil Detail Items per Transaksi
+# Mengambil Detail Items per Transaksi
 def get_detail_items(transaksi_id):
     conn = get_db_connection()
     query = """

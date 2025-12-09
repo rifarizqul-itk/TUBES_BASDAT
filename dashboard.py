@@ -2,12 +2,12 @@ import streamlit as st
 import pandas as pd
 from config import get_transaksi_data, get_product_sales_data, get_payment_status_data, get_detail_items
 
-# --- 1. CONFIG HALAMAN ---
+# --- CONFIG HALAMAN ---
 st.set_page_config(page_title="Dashboard Toko NN", layout="wide")
 st.title("🏗️ Dashboard Data Penjualan Toko NN")
 st.write("Jl. Pandan Sari No.45, Marga Sari, Kec. Balikpapan Bar., Kota Balikpapan, Kalimantan Timur 76123")
 
-# --- 2. LOAD DATA ---
+# --- LOAD DATA ---
 df_transaksi = get_transaksi_data()
 df_produk = get_product_sales_data()
 df_payment = get_payment_status_data()
@@ -15,7 +15,7 @@ df_payment = get_payment_status_data()
 # Convert kolom tanggal
 df_transaksi['tanggal'] = pd.to_datetime(df_transaksi['tanggal'])
 
-# --- 3. FILTER TANGGAL (Versi Simpel) ---
+# --- FILTER TANGGAL ---
 st.sidebar.header("Filter Tanggal")
 min_date = df_transaksi['tanggal'].min()
 max_date = df_transaksi['tanggal'].max()
@@ -29,7 +29,7 @@ filtered_df = df_transaksi[
     (df_transaksi['tanggal'] <= pd.to_datetime(end_date))
 ]
 
-# --- 4. RINGKASAN (Metrics) ---
+# --- RINGKASAN (Metrics) ---
 st.subheader("Ringkasan Performa")
 col1, col2, col3 = st.columns(3)
 
@@ -50,28 +50,28 @@ with col3:
 
 st.markdown("---")
 
-# --- 5. GRAFIK  ---
+# --- GRAFIK  ---
 col_kiri, col_kanan = st.columns([2, 1])
 
 with col_kiri:
     st.subheader("Tren Penjualan")
-    # Data disiapkan sederhana: Tanggal & Total
+    # Data: Tanggal & Total
     daily = filtered_df.groupby('tanggal')['total_tagihan'].sum()
     st.line_chart(daily)
 
 with col_kanan:
     st.subheader("Status Pembayaran")
-    # Data disiapkan sederhana: Status & Jumlah
+    # Data: Status & Jumlah
     status_counts = df_payment.set_index('status_pembayaran')['jumlah_transaksi']
     st.bar_chart(status_counts)
 
 st.markdown("---")
 
-# --- 6. DETAIL TRANSAKSI (Gaya 'Invoice' yang Kamu Suka) ---
+# --- DETAIL TRANSAKSI ---
 st.subheader("📄 Detail Transaksi")
 
-# Buat list pilihan ID yang rapi (ID - Nama Pelanggan)
-# Kita pakai Dictionary Comprehension biar codingan terlihat Python banget tapi tetap mudah dimengerti
+# Buat list pilihan ID (ID - Nama Pelanggan)
+# Pakai Dictionary Comprehension
 pilihan_transaksi = filtered_df['transaksi_id'].tolist()
 label_transaksi = {
     row['transaksi_id']: f"ID {row['transaksi_id']} - {row['nama_pelanggan']} ({row['tanggal'].strftime('%d/%m/%Y')})"
